@@ -961,25 +961,25 @@ UniValue uploadmessage(const UniValue& params, bool fHelp)
     
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "uploadmessage \"message\"\n"
-            "\nSend an amount to a given address.\n"
+            "uploadmessage \"hexmessage\"\n"
+            "\nSend some hexmessage to chain.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"message\"  (string, required) The message to send to chain.\n"
+            "1. \"hexmessage\"  (string, required) The hexmessage to send to chain.\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("uploadmessage", "\"ulordchain\"")
+            + HelpExampleCli("uploadmessage", "\"60a8597dff01\"")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     std::string sMessage = params[0].get_str();
-    if (sMessage.size() <= 0)
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid message");
-    if (sMessage.size() > MAX_MESSAGE_SIZE)
+    if (sMessage.size() <= 0 || !IsHex(sMessage))
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid hexmessage");
+    if (sMessage.size() > (2*MAX_MESSAGE_SIZE))
         throw JSONRPCError(RPC_INVALID_PARAMETER,"Message is too much for send");           
-    std::vector<unsigned char> vchMessage(sMessage.begin(),sMessage.end());
+    std::vector<unsigned char> vchMessage = ParseHex(sMessage);
 
     // Amount
     /*CAmount nAmount = AmountFromValue(params[1]);
