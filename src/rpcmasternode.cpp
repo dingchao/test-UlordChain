@@ -103,7 +103,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
         (strCommand != "start" && strCommand != "start-alias" && strCommand != "start-all" && strCommand != "start-missing" &&
          strCommand != "start-disabled" && strCommand != "list" && strCommand != "list-conf" && strCommand != "count" &&
          strCommand != "debug" && strCommand != "current" && strCommand != "winner" && strCommand != "winners" && strCommand != "genkey" &&
-         strCommand != "connect" && strCommand != "outputs" && strCommand != "status"  && strCommand != "certificate"))
+         strCommand != "connect" && strCommand != "outputs" && strCommand != "status"  && strCommand != "license"))
             throw std::runtime_error(
                 "masternode \"command\"... ( \"passphrase\" )\n"
                 "Set of commands to execute masternode related actions\n"
@@ -124,7 +124,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
                 "  list-conf    - Print ulord.conf in JSON format\n"
                 "  winner       - Print info on next masternode winner to vote for\n"
                 "  winners      - Print list of masternode winners\n"
-                "  certificate  - Print masternode register certificate\n"
+                "  license  - Print masternode register license\n"
                 );
 
     if (strCommand == "list")
@@ -449,7 +449,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
         return obj;
     }
     
-    if (strCommand == "certificate")    //add check Ucenter certificate infomation
+    if (strCommand == "license")    //add check Ucenter certificate infomation
     {
         if (!fMasterNode)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "This is not a masternode");
