@@ -124,7 +124,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
                 "  list-conf    - Print ulord.conf in JSON format\n"
                 "  winner       - Print info on next masternode winner to vote for\n"
                 "  winners      - Print list of masternode winners\n"
-                "  license  - Print masternode register license\n"
+                "  license      - Print masternode register license\n"
                 );
 
     if (strCommand == "list")
