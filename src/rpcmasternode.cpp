@@ -399,6 +399,14 @@ UniValue masternode(const UniValue& params, bool fHelp)
             mnObj.push_back(Pair("license version", mn.certifyVersion));
             mnObj.push_back(Pair("license period", mn.certifyPeriod));
             mnObj.push_back(Pair("license data", mn.certificate));
+            if(mn.certifyPeriod <= GetTime())
+            {
+                mnObj.push_back(Pair("license status", "expire"));
+            }
+            else 
+            {
+                mnObj.push_back(Pair("license status", "enable"));
+            }
         }
 
         mnObj.push_back(Pair("status", activeMasternode.GetStatus()));
@@ -440,27 +448,34 @@ UniValue masternode(const UniValue& params, bool fHelp)
 
         return obj;
     }
-	
-	if (strCommand == "certificate")
-	{
-		if (!fMasterNode)
-			throw JSONRPCError(RPC_INTERNAL_ERROR, "This is not a masternode");
-	
-		UniValue mnObj(UniValue::VOBJ);
+    
+    if (strCommand == "certificate")    //add check Ucenter certificate infomation
+    {
+        if (!fMasterNode)
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "This is not a masternode");
+    
+        UniValue mnObj(UniValue::VOBJ);
 
-		//CMasternode* pmn = mnodeman.Find(activeMasternode.vin);
-	    //mnObj.push_back(Pair(pmn->vin->prevout.ToStringShort(), pmn->certificate));
-	
-		CMasternode mn;
-		if(mnodeman.Get(activeMasternode.vin, mn)) {
-			mnObj.push_back(Pair(mn.vin.prevout.ToStringShort(), mn.certificate.c_str()));
-		}
-		else
-		{
-			mnObj.push_back(Pair(("status"), activeMasternode.GetStatus()));
-		}
-		return mnObj;
-	}
+        CMasternode mn;
+        if(mnodeman.Get(activeMasternode.vin, mn)) 
+        {
+            mnObj.push_back(Pair(mn.vin.prevout.ToStringShort(), mn.certificate.c_str()));
+        }
+        else
+        {
+            mnObj.push_back(Pair(("status"), activeMasternode.GetStatus()));
+        }
+
+        if(mn.certifyPeriod <= GetTime())
+        {
+            mnObj.push_back(Pair("license status", "expire"));
+        }
+        else 
+        {
+            mnObj.push_back(Pair("license status", "enable"));
+        }
+        return mnObj;
+    }
 
     return NullUniValue;
 }
