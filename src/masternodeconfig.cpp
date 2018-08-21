@@ -21,14 +21,15 @@ void CMasternodeConfig::add(std::string alias, std::string ip, std::string privK
 bool CMasternodeConfig::read(std::string& strErr) {
 
 
-    int64_t masternodecout = GetArg("-masternode", 0);  
-    if(masternodecout)
+    boost masternodeflag = GetBoolArg("-masternode", false);
+    if(masternodeflag)
     {
         std::string alias, ip, privKey, txHash, outputIndex;
-        alias = GetArg("-alias", "mnl");
+        alias = GetArg("-alias", "");
         if(alias.empty())
         {
             strErr = _("please add your masternode name into ulord.conf; for example: alias=mynode\n");
+            return false;
         }
         ip = GetArg("-externalip", "");
         if(ip.empty())
@@ -111,6 +112,72 @@ bool CMasternodeConfig::IsLocalEntry()
 	return false;
 }
 
+bool CMasternodeConfig::InMempool(uint256 txHash) const
+{
+    LOCK(mempool.cs);
+    if (mempool.exists(txHash)) {
+        return true;
+    }
+    return false;
+}
+
+bool CMasternodeConfig::HaveInputs(const CTransaction& tx) const
+{
+    if (!tx.IsCoinBase()) {
+        for (unsigned int i = 0; i < tx.vin.size(); i++) {
+            const COutPoint &prevout = tx.vin[i].prevout;
+            const CCoins* coins = AccessCoins(prevout.hash);
+            if (!coins || !coins->IsAvailable(prevout.n)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
+{
+    // Find the block it claims to be in
+    BlockMap::iterator mi = mapBlockIndex.find(txHash);
+    if (mi == mapBlockIndex.end())
+    {
+        return false;
+    }
+    else {
+        if(!InMempool(txHash))
+            return false;
+    }
+
+    CTransaction tx;
+    uint256 hashBlock;
+    if(GetTransaction(txHash, tx, Params().GetConsensus(), hashBlock, true))
+    {
+        LogPrintf("CMasternodeBroadcast::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
+        return false;
+    }
+    if (!CheckFinalTx(*tx) || tx.IsCoinBase()) {
+        return false;
+    }
+
+    if(!HaveInputs(tx))
+    {
+        return false;
+    }
+    
+    CCoins coins;
+    if(!pcoinsTip->GetCoins(txHash, coins) || index >=coins.vout.size() || coins.vout[index].IsNull())
+    {
+        LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
+        return false;
+    }
+
+    const int64_t ct = Params().GetConsensus().colleteral;     // colleteral amount
+    if(coins->vout[index].nValue != ct)
+        return false;
+
+    return true;
+}
+
 bool CMasternodeConfig::GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash, std::string strOutputIndex)
 {
     // wait for reindex and/or import to finish
@@ -119,22 +186,25 @@ bool CMasternodeConfig::GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash,
 
     if(strTxHash.empty()) // No output specified, select the one specified by masternodeConfig
     {
-        if(masternodeConfig.IsLocalEntry())
+        CMasternodeConfig::CMasternodeEntry mne = masternodeConfig.GetLocalEntry();
+        unsigned int index = atoi(mne.getOutputIndex().c_str());
+        uint256 txHash = uint256S(mne.getTxHash());
+        txinRet = CTxIn(txHash, index);
+        
+        int nInputAge = GetInputAge(txinRet);
+        if(nInputAge <= 0)
         {
-            CMasternodeConfig::CMasternodeEntry mne = masternodeConfig.GetLocalEntry();
-            unsigned int index = atoi(mne.getOutputIndex().c_str());
-            uint256 txHash = uint256S(mne.getTxHash());
-            txinRet = CTxIn(txHash, index);
-            CCoins coins;
-            if(!pcoinsTip->GetCoins(txHash, coins) || index >=coins.vout.size() || coins.vout[index].IsNull())
-            {
-                LogPrintf("CMasternodeBroadcast::getPubKeyId -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
-                return false;
-            }
-            return true;
+            LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is not exist,please check it\n");
+            return false;
         }
-        LogPrintf("CMasternodeConfig::GetMasternodeVin -- Could not locate the masternode configure vin, please check the ulord.conf\n");
-        return false;
+
+        if(!masternodeConfig.AvailableCoins(txHash, index))
+        {
+            LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is AvailableCoins,please check it\n");
+            return false;
+        }
+        
+        return true;
     }
 
     // Find specific vin
