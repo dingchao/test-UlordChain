@@ -138,6 +138,7 @@ bool CMasternodeConfig::HaveInputs(const CTransaction& tx) const
 bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
 {
     // Find the block it claims to be in
+#if  0
     BlockMap::iterator mi = mapBlockIndex.find(txHash);
     if (mi == mapBlockIndex.end())
     {
@@ -147,10 +148,11 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
         //if(!mempool.InMempool(txHash))
             //return false;
     }
+#endif
 
     CTransaction tx;
     uint256 hashBlock;
-    if(GetTransaction(txHash, tx, Params().GetConsensus(), hashBlock, true))
+    if(!GetTransaction(txHash, tx, Params().GetConsensus(), hashBlock, true))
     {
         LogPrintf("CMasternodeBroadcast::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
         return false;
