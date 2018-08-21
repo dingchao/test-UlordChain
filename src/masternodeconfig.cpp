@@ -111,7 +111,7 @@ bool CMasternodeConfig::IsLocalEntry()
 	}
 	return false;
 }
-
+/*
 bool CMasternodeConfig::InMempool(uint256 txHash) const
 {
     LOCK(mempool.cs);
@@ -134,7 +134,7 @@ bool CMasternodeConfig::HaveInputs(const CTransaction& tx) const
     }
     return true;
 }
-
+*/
 bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
 {
     // Find the block it claims to be in
@@ -158,12 +158,12 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     if (!CheckFinalTx(tx) || tx.IsCoinBase()) {
         return false;
     }
-
+/*
     if(!HaveInputs(tx))
     {
         return false;
     }
-    
+    */
     CCoins coins;
     if(!pcoinsTip->GetCoins(txHash, coins) || index >=coins.vout.size() || coins.vout[index].IsNull())
     {
@@ -175,6 +175,9 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     if(coins.vout[index].nValue != ct)
         return false;
 
+    if(coins.IsPruned())
+        return false;
+    
     return true;
 }
 
