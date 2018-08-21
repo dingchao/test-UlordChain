@@ -233,7 +233,7 @@ LogPrintf("GetLocal() = %c, IsValidNetAddr = %c \n", GetLocal(service, &pnode->a
 #endif // ENABLE_WALLET
 #endif
 
-	if(masternodeConfig.IsLocalEntry())
+	if(masternodeConfig.GetMasternodeVin(vin))
 	{
 		eType = MASTERNODE_LOCAL;
 	}
@@ -282,7 +282,7 @@ void CActiveMasternode::ManageStateRemote()
     }
 }
 
-#ifdef ENABLE_WALLET
+
 void CActiveMasternode::ManageStateLocal()
 {
     LogPrint("masternode", "CActiveMasternode::ManageStateLocal -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
@@ -343,4 +343,4 @@ void CActiveMasternode::ManageStateLocal()
         mnb.Relay();
     }
 }
-#endif // ENABLE_WALLET
+
