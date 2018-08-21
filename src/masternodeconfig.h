@@ -102,9 +102,9 @@ public:
     CMasternodeConfig::CMasternodeEntry GetLocalEntry();
     bool IsLocalEntry();
     bool GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash = "", std::string strOutputIndex = "");
-    bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index);
-    bool CMasternodeConfig::HaveInputs(const CTransaction& tx) const;
-    bool CMasternodeConfig::InMempool(uint256 txHash) const;
+    bool AvailableCoins(uint256 txHash, unsigned int index);
+    bool HaveInputs(const CTransaction& tx) const;
+    bool InMempool(uint256 txHash) const;
 
 private:
     std::vector<CMasternodeEntry> entries;
