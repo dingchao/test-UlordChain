@@ -21,7 +21,7 @@ void CMasternodeConfig::add(std::string alias, std::string ip, std::string privK
 bool CMasternodeConfig::read(std::string& strErr) {
 
 
-    boost masternodeflag = GetBoolArg("-masternode", false);
+    bool masternodeflag = GetBoolArg("-masternode", false);
     if(masternodeflag)
     {
         std::string alias, ip, privKey, txHash, outputIndex;
