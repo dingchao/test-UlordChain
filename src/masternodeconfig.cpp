@@ -144,8 +144,8 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
         return false;
     }
     else {
-        if(!InMempool(txHash))
-            return false;
+        //if(!mempool.InMempool(txHash))
+            //return false;
     }
 
     CTransaction tx;
@@ -155,7 +155,7 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
         LogPrintf("CMasternodeBroadcast::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
         return false;
     }
-    if (!CheckFinalTx(*tx) || tx.IsCoinBase()) {
+    if (!CheckFinalTx(tx) || tx.IsCoinBase()) {
         return false;
     }
 
@@ -172,7 +172,7 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     }
 
     const int64_t ct = Params().GetConsensus().colleteral;     // colleteral amount
-    if(coins->vout[index].nValue != ct)
+    if(coins.vout[index].nValue != ct)
         return false;
 
     return true;
