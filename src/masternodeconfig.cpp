@@ -111,45 +111,9 @@ bool CMasternodeConfig::IsLocalEntry()
 	}
 	return false;
 }
-/*
-bool CMasternodeConfig::InMempool(uint256 txHash) const
-{
-    LOCK(mempool.cs);
-    if (mempool.exists(txHash)) {
-        return true;
-    }
-    return false;
-}
 
-bool CMasternodeConfig::HaveInputs(const CTransaction& tx) const
-{
-    if (!tx.IsCoinBase()) {
-        for (unsigned int i = 0; i < tx.vin.size(); i++) {
-            const COutPoint &prevout = tx.vin[i].prevout;
-            const CCoins* coins = AccessCoins(prevout.hash);
-            if (!coins || !coins->IsAvailable(prevout.n)) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-*/
 bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
 {
-    // Find the block it claims to be in
-#if  0
-    BlockMap::iterator mi = mapBlockIndex.find(txHash);
-    if (mi == mapBlockIndex.end())
-    {
-        return false;
-    }
-    else {
-        //if(!mempool.InMempool(txHash))
-            //return false;
-    }
-#endif
-
     CTransaction tx;
     uint256 hashBlock;
     if(!GetTransaction(txHash, tx, Params().GetConsensus(), hashBlock, true))
@@ -160,12 +124,7 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     if (!CheckFinalTx(tx) || tx.IsCoinBase()) {
         return false;
     }
-/*
-    if(!HaveInputs(tx))
-    {
-        return false;
-    }
-    */
+
     CCoins coins;
     if(!pcoinsTip->GetCoins(txHash, coins) || index >=coins.vout.size() || coins.vout[index].IsNull())
     {
@@ -180,12 +139,12 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
         return false;
     }
 
-    if(coins.IsPruned())
+    if(chainActive.Height() - coins.nHeight + 1 < Params().GetConsensus().nMasternodeMinimumConfirmations) 
     {
-        LogPrintf("CMasternodeConfig::AvailableCoins -- colleteral amount is spent\n");
+        LogPrintf("CMasternodeConfig::AvailableCoins -- Masternode UTXO must have at least %d confirmations\n",Params().GetConsensus().nMasternodeMinimumConfirmations);
         return false;
     }
-    
+
     return true;
 }
 
