@@ -98,19 +98,7 @@ CMasternodeConfig::CMasternodeEntry CMasternodeConfig::GetLocalEntry()
 	return CMasternodeEntry();
 }
 
-bool CMasternodeConfig::IsLocalEntry()
-{
-	if(fMasterNode)
-	{
-		for(auto & mn : entries)
-		{
-			if(mn.getPrivKey() == GetArg("-masternodeprivkey", "") && GetArg("-collateraloutputtxid", "") != "" 
-				&& GetArg("-broadcastsign", "") != "")
-				return true;
-		}
-	}
-	return false;
-}
+
 
 bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
 {
@@ -182,11 +170,21 @@ bool CMasternodeConfig::GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash,
     int nOutputIndex = atoi(strOutputIndex.c_str());
 
     txinRet = CTxIn(txHash,nOutputIndex);
-    CCoins coins;
-    if(pcoinsTip->GetCoins(txHash, coins))	
+    int nInputAge = GetInputAge(txinRet);
+    if(nInputAge <= 0)
     {
-        return true;
+    	LogPrintf("CMasternodeConfig::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is not exist,please check it\n");
+        return false;
     }
+
+    if(!masternodeConfig.AvailableCoins(txHash, index))
+    {
+        LogPrintf("CMasternodeConfig::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is AvailableCoins,please check it\n");
+        return false;
+    }
+        
+        return true;
+
     
     LogPrintf("CMasternodeConfig::GetMasternodeVin -- Could not locate specified masternode vin\n");
     return false;    
