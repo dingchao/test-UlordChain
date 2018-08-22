@@ -177,15 +177,11 @@ bool CMasternodeConfig::GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash,
         return false;
     }
 
-    if(!masternodeConfig.AvailableCoins(txHash, index))
+    if(!masternodeConfig.AvailableCoins(txHash, nOutputIndex))
     {
         LogPrintf("CMasternodeConfig::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is AvailableCoins,please check it\n");
         return false;
     }
         
-        return true;
-
-    
-    LogPrintf("CMasternodeConfig::GetMasternodeVin -- Could not locate specified masternode vin\n");
-    return false;    
+    return true;
 }
