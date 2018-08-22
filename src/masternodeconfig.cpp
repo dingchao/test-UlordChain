@@ -154,7 +154,7 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     uint256 hashBlock;
     if(!GetTransaction(txHash, tx, Params().GetConsensus(), hashBlock, true))
     {
-        LogPrintf("CMasternodeBroadcast::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
+        LogPrintf("CMasternodeConfig::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
         return false;
     }
     if (!CheckFinalTx(tx) || tx.IsCoinBase()) {
@@ -169,16 +169,22 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
     CCoins coins;
     if(!pcoinsTip->GetCoins(txHash, coins) || index >=coins.vout.size() || coins.vout[index].IsNull())
     {
-        LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
+        LogPrintf("CMasternodeConfig::AvailableCoins -- masternode collateraloutputtxid or collateraloutputindex is error,please check it\n");
         return false;
     }
 
     const int64_t ct = Params().GetConsensus().colleteral;     // colleteral amount
     if(coins.vout[index].nValue != ct)
+    {
+        LogPrintf("CMasternodeConfig::AvailableCoins -- colleteral amount must be:%d, but now is:%d\n", ct, coins.vout[index].nValue);
         return false;
+    }
 
     if(coins.IsPruned())
+    {
+        LogPrintf("CMasternodeConfig::AvailableCoins -- colleteral amount is spent\n");
         return false;
+    }
     
     return true;
 }
@@ -199,13 +205,13 @@ bool CMasternodeConfig::GetMasternodeVin(CTxIn& txinRet,  std::string strTxHash,
         int nInputAge = GetInputAge(txinRet);
         if(nInputAge <= 0)
         {
-            LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is not exist,please check it\n");
+            LogPrintf("CMasternodeConfig::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is not exist,please check it\n");
             return false;
         }
 
         if(!masternodeConfig.AvailableCoins(txHash, index))
         {
-            LogPrintf("CMasternodeBroadcast::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is AvailableCoins,please check it\n");
+            LogPrintf("CMasternodeConfig::GetMasternodeVin -- collateraloutputtxid or collateraloutputindex is AvailableCoins,please check it\n");
             return false;
         }
         
