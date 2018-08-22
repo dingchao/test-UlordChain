@@ -263,7 +263,7 @@ void CActiveMasternode::ManageStateRemote()
         }
         if(vin != infoMn.vin) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-            strNotCapableReason = "Specified IP doesn't match our external vin.";
+            strNotCapableReason = "Specified collateraloutputtxid doesn't match our external vin.";
             LogPrintf("CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
