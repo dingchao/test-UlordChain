@@ -39,7 +39,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "versionbits.h"
-
+#include "rpcprotocol.h"
 #include "privsend.h"
 #include "governance.h"
 #include "instantx.h"
@@ -48,6 +48,7 @@
 #include "masternodeman.h"
 
 #include <sstream>
+#include <regex>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
@@ -612,7 +613,7 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
 CCoinsViewCache *pcoinsTip = NULL;
 CClaimTrie *pclaimTrie = NULL; // claim operation
 CBlockTreeDB *pblocktree = NULL;
-bool is_Init = true;
+std::vector<std::string> v_banname;
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1084,8 +1085,15 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     string reason;
     if (fRequireStandard && !IsStandardTx(tx, reason))
+	{
         return state.DoS(0, false, REJECT_NONSTANDARD, reason);
+	}
 
+	if ( !VerifyAccountName(tx) )
+	{
+	    return state.DoS(0, false, REJECT_ACOOUNTNAME_CREATE, "reject accountname is created");
+	}
+	
     // Don't relay version 2 transactions until CSV is active, and we can be
     // sure that such transactions will be mined (unless we're on
     // -testnet/-regtest).
@@ -7305,3 +7313,172 @@ public:
         mapOrphanTransactionsByPrev.clear();
     }
 } instance_of_cmaincleanup;
+
+// verify special transaction about OP_CLAIM_NAME
+bool VerifyAccountName(const CTransaction& tx)
+{
+	int i_ret;
+	BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+   		i_ret = VerifyClaimScriptPrefix(txout.scriptPubKey,txout);
+		switch (i_ret)
+		{
+			case STAND_SCRIPT_OR_SPECIAL_SCRIPT:
+				break;
+			case ACCOUNTNAME_EXISTS:
+			case ACCOUNTNAME_ILLEGAL:
+			case ACCOUNTNAME_INVAILDCASH:
+			default:
+				return false;
+		}
+    }
+	return true;
+}
+
+int VerifyClaimScriptPrefix(const CScript& scriptIn,const CTxOut& txout)
+{
+    int op;
+    return VerifyClaimScriptPrefix(scriptIn, op,txout);
+}
+
+int VerifyClaimScriptPrefix(const CScript & scriptIn, int & op, const CTxOut & txout)
+{
+    std::vector<std::vector<unsigned char> > vvchParams;
+    CScript::const_iterator pc = scriptIn.begin();
+
+    return VerifyDecodeClaimScript(scriptIn, op, vvchParams, pc,txout);
+}
+
+
+int VerifyDecodeClaimScript(const CScript& scriptIn, int& op, std::vector<std::vector<unsigned char> >& vvchParams,const CTxOut& txout)
+{
+    CScript::const_iterator pc = scriptIn.begin();
+    return VerifyDecodeClaimScript(scriptIn, op, vvchParams, pc,txout);
+}
+
+
+int VerifyDecodeClaimScript(const CScript& scriptIn, int& op, std::vector<std::vector<unsigned char> >& vvchParams, CScript::const_iterator& pc,const CTxOut& txout)
+{
+    opcodetype opcode;
+    if (!scriptIn.GetOp(pc, opcode))
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+    
+    if (opcode != OP_CLAIM_NAME && opcode != OP_SUPPORT_CLAIM && opcode != OP_UPDATE_CLAIM)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+	
+    op = opcode;
+
+    std::vector<unsigned char> vchParam1;
+    std::vector<unsigned char> vchParam2;
+    std::vector<unsigned char> vchParam3;
+    // Valid formats:
+    // OP_CLAIM_NAME vchName vchValue OP_2DROP OP_DROP pubkeyscript
+    // OP_UPDATE_CLAIM vchName vchClaimId vchValue OP_2DROP OP_2DROP pubkeyscript
+    // OP_SUPPORT_CLAIM vchName vchClaimId OP_2DROP OP_DROP pubkeyscript
+    // All others are invalid.
+
+    if (!scriptIn.GetOp(pc, opcode, vchParam1) || opcode < 0 || opcode > OP_PUSHDATA4)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+
+	std::string sName(vchParam1.begin(),vchParam1.end());
+	std::string s_tempname;
+	std::map<std::string,int>::iterator m_it;
+	std::vector<std::string>::iterator m_strit;
+	int i_currentheight = chainActive.Height();
+	CClaimValue claim;
+	std::string szReg = "^[a-z0-5]+[a-z0-5]$";
+	std::regex reg( szReg );
+	bool b_r;
+	int i_times = m_vStringName.count(sName);
+	LogPrintf("i_times is %d\n",i_times);
+
+	for ( m_it = m_vStringName.begin() ; m_it != m_vStringName.end() ; m_it++ )
+	{
+		if ( (chainActive.Height() - m_it->second) >= MIN_ACCOUNT_NAME_NUMBER )
+		{
+			s_tempname = m_it->first;
+			m_vStringName.erase(s_tempname);
+		}
+		if ( !m_it->first.compare(sName) )
+		{
+			return ACCOUNTNAME_EXISTS;
+		}
+	}
+	
+	if ( i_times == 0  )
+	{
+		LogPrintf("txout.nValue is %d.%08d\n",txout.nValue/COIN,txout.nValue % COIN);
+		b_r = std::regex_match( sName,reg);
+		if ( !b_r )
+		{
+			return ACCOUNTNAME_ILLEGAL;
+		}
+		
+		for (m_strit = v_banname.begin(); m_strit != v_banname.end(); m_strit++)
+		{
+			if (!m_strit->compare(sName))
+			{
+				return ACCOUNTNAME_ILLEGAL;
+			}
+		}
+		
+		if ( txout.nValue != MAX_ACCOUNT_NAME )
+		{
+			return ACCOUNTNAME_INVAILDCASH;
+		}
+		
+		if (pclaimTrie->getInfoForName(sName, claim))
+		{
+			return ACCOUNTNAME_EXISTS;
+		}
+		m_vStringName.insert(std::pair<std::string,int>(sName,i_currentheight));
+	}
+	
+    if (!scriptIn.GetOp(pc, opcode, vchParam2) || opcode < 0 || opcode > OP_PUSHDATA4)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+    if (op == OP_UPDATE_CLAIM || op == OP_SUPPORT_CLAIM)
+    {
+        if (vchParam2.size() != 160/8)
+        {
+            return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+        }
+    }
+    if (op == OP_UPDATE_CLAIM)
+    {
+        if (!scriptIn.GetOp(pc, opcode, vchParam3) || opcode < 0 || opcode > OP_PUSHDATA4)
+        {
+            return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+        }
+    }
+    if (!scriptIn.GetOp(pc, opcode) || opcode != OP_2DROP)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+    if (!scriptIn.GetOp(pc, opcode))
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+    if ((op == OP_CLAIM_NAME || op == OP_SUPPORT_CLAIM) && opcode != OP_DROP)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+    else if ((op == OP_UPDATE_CLAIM) && opcode != OP_2DROP)
+    {
+        return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+    }
+	
+    vvchParams.push_back(vchParam1);
+    vvchParams.push_back(vchParam2);
+    if (op == OP_UPDATE_CLAIM)
+    {
+        vvchParams.push_back(vchParam3);
+    }
+    return STAND_SCRIPT_OR_SPECIAL_SCRIPT;
+}
