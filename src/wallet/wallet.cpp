@@ -2804,40 +2804,50 @@ bool CWallet::GetCollateralTxIn(CTxIn& txinRet, CAmount& nValueRet) const
     return false;
 }
 
-bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet,  std::string strTxHash, std::string strOutputIndex)
+bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash, std::string strOutputIndex)
 {
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
+    // Find possible candidates
+    std::vector<COutput> vPossibleCoins;
+    AvailableCoins(vPossibleCoins, true, NULL, false, ONLY_1000);
+    if(vPossibleCoins.empty()) {
+        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
+        return false;
+    }
 
     if(strTxHash.empty()) // No output specified, select the one specified by masternodeConfig
     {
-        if(masternodeConfig.IsLocalEntry())
-        {
-            CMasternodeConfig::CMasternodeEntry mne = masternodeConfig.GetLocalEntry();
-            int index = atoi(mne.getOutputIndex().c_str());
-            uint256 txHash = uint256S(mne.getTxHash());
-            txinRet = CTxIn(txHash, index);
-            return true;
-        }
-        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate the masternode configure vin, please check the ulord.conf\n");
-        return false;
+    	CMasternodeConfig::CMasternodeEntry mne = masternodeConfig.GetLocalEntry();
+		if(mne.getTxHash() != "")
+		{
+			uint256 confTxHash;
+            int confoutid;
+    		BOOST_FOREACH(COutput& out, vPossibleCoins)
+    		{
+    			confTxHash.SetHex(mne.getTxHash());
+                confoutid = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+    			if(out.tx->GetHash() == confTxHash && confoutid == out.i)
+					return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);			
+    		}
+		}
+		LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate the masternode configure vin, please check the masternode.conf\n");
+		return false;
     }
 
     // Find specific vin
     uint256 txHash = uint256S(strTxHash);
     int nOutputIndex = atoi(strOutputIndex.c_str());
 
-    txinRet = CTxIn(txHash,nOutputIndex);
-    CCoins coins;
-    if(pcoinsTip->GetCoins(txHash, coins))	
-    {
-        return true;
-    }
-    
+    BOOST_FOREACH(COutput& out, vPossibleCoins)
+        if(out.tx->GetHash() == txHash && out.i == nOutputIndex) // found it!
+            return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);
+
     LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate specified masternode vin\n");
     return false;
 }
+
 
 bool CWallet::GetVinAndKeysFromOutput(CTxOut vout, CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet)
 {
