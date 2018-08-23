@@ -1883,14 +1883,7 @@ bool CMasternodeCenter::InitCenter(std::string strError)
     char uctPubkeyVersion[20];
     int licenseVersion = 1;
     licenseVersion_ = licenseVersion;
-    //mapVersionPubkey_.insert(std::pair<int, std::string>(licenseVersion, GetArg("-uctpubkey1", "03e867486ebaeeadda25f1e47612cdaad3384af49fa1242c5821b424937f8ec1f5")));
-
-    mapVersionPubkey_.insert(std::pair<int, std::string>(licenseVersion, GetArg("-uctpubkey1", "03e867486ebaeeadda25f1e47612cdaad3384af49fa1242c5821b424937f8ec1")));
-   /* std::string license = GetArg("-uctpubkey1", "");
-    if(license.empty())
-    {
-    	mapVersionPubkey_.insert(std::pair<int, std::string>(licenseVersion, license));
-    }*/
+    mapVersionPubkey_.insert(std::pair<int, std::string>(licenseVersion, GetArg("-uctpubkey1", "03e867486ebaeeadda25f1e47612cdaad3384af49fa1242c5821b424937f8ec1f5")));
     LogPrintf("Load ucenter pubkey <%d: %s>\n", licenseVersion, GetArg("-uctpubkey1", "03e867486ebaeeadda25f1e47612cdaad3384af49fa1242c5821b424937f8ec1f5"));
     std::string strUctPubkey;
     licenseVersion++;
@@ -2184,6 +2177,7 @@ bool CMasternodeCenter::LoadLicense(CMasternode &mn)
         return true;
     
     if(!ReadLicense(mn)) {
+	RequestCenterKey();
         if(!RequestLicense(mn))
             return false;
     }
@@ -2209,7 +2203,7 @@ bool CMasternodeCenter::VerifyLicense(const CMasternode &mn)
     bool ret = mnData.VerifyLicense();
     if(!ret)
     {
-
+        RequestCenterKey();
         return mnData.VerifyLicense();
     }else 
         return ret;
@@ -2224,7 +2218,7 @@ bool CMasternodeCenter::VerifyLicense(const CMasternodePing &mnp)
     bool ret = mnData.VerifyLicense();
     if(!ret)
     {
-        mnData._licversion ++;
+        RequestCenterKey();
         return mnData.VerifyLicense();
     }else
         return ret;
