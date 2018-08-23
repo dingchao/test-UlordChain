@@ -577,7 +577,7 @@ private:
 public:
     CMasternodeCenter():isUse_(false){}
     bool InitCenter(std::string strError);
-    std::string GetCenterPubKey(int version);
+    std::string GetCenterPubKey(int& version);
     bool IsUse();
     bool CheckLicensePeriod(CMasternode &mn);
     bool VerifyLicense(const CMasternode &mn);
@@ -588,7 +588,7 @@ public:
 private:
     bool RequestLicense(CMasternode &mn);
     bool ReadLicense(CMasternode &mn);
-    bool RequestCenterKey();
+    bool RequestCenterKey(int& version);
 };
 
 #endif

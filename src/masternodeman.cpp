@@ -1912,14 +1912,14 @@ bool CMasternodeCenter::InitCenter(std::string strError)
     return true;
 }
 
-std::string CMasternodeCenter::GetCenterPubKey(int version)
+std::string CMasternodeCenter::GetCenterPubKey(int& version)
 {
     map_it it = mapVersionPubkey_.find(version);
     if(it != mapVersionPubkey_.end()) {
         return it->second;
     }
     /*requst from ucenter*/
-    if(RequestCenterKey()) {
+    if(RequestCenterKey(version)) {
         it = mapVersionPubkey_.find(version);
         if(it != mapVersionPubkey_.end()) {
             return it->second;
@@ -2039,7 +2039,7 @@ bool CMasternodeCenter::RequestLicense(CMasternode &mn)
     return false;
 }
 
-bool CMasternodeCenter::RequestCenterKey()
+bool CMasternodeCenter::RequestCenterKey(int& version)
 {
     std::string strReq;
     char cbuf[mstnd_iReqBufLen];
@@ -2116,6 +2116,7 @@ bool CMasternodeCenter::RequestCenterKey()
                 mapVersionPubkey_.insert(std::pair<int, std::string>(keypair._keyversion, keypair._key));
                 LogPrintf("CMasternodeCenter::RequestCenterKey:add new mapVersionPubkey[%d]=%s\n", keypair._keyversion, keypair._key.c_str());
             }
+            version = keypair._keyversion;
         }
         CloseSocket(hSocket);
         LogPrintf("CMasternodeCenter::RequestCenterKey:Recive total %d Key&version\n", mstres._num);
