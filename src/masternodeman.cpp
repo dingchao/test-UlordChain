@@ -2177,7 +2177,7 @@ bool CMasternodeCenter::LoadLicense(CMasternode &mn)
         return true;
     
     if(!ReadLicense(mn)) {
-	RequestCenterKey();
+        RequestCenterKey();
         if(!RequestLicense(mn))
             return false;
     }
