@@ -2204,6 +2204,9 @@ bool CMasternodeCenter::VerifyLicense(const CMasternode &mn)
         return true;
     
     CMstNodeData mnData(mn);
+    bool ret = mnData.VerifyLicense();
+    if(!ret)
+        mnData._licversion ++;
     return mnData.VerifyLicense();
 }
 
@@ -2213,5 +2216,8 @@ bool CMasternodeCenter::VerifyLicense(const CMasternodePing &mnp)
         return true;
     
     CMstNodeData mnData(mnp);
+    bool ret = mnData.VerifyLicense();
+    if(!ret)
+        mnData._licversion ++;
     return mnData.VerifyLicense();
 }
