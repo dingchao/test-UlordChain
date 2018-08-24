@@ -2179,7 +2179,6 @@ bool CMasternodeCenter::LoadLicense(CMasternode &mn)
         return true;
     
     if(!ReadLicense(mn)) {
-        RequestCenterKey();
         if(!RequestLicense(mn))
             return false;
     }
@@ -2202,13 +2201,7 @@ bool CMasternodeCenter::VerifyLicense(const CMasternode &mn)
         return true;
     
     CMstNodeData mnData(mn);
-    bool ret = mnData.VerifyLicense();
-    if(!ret)
-    {
-        RequestCenterKey();
-        return mnData.VerifyLicense();
-    }else 
-        return ret;
+    return mnData.VerifyLicense();
 }
 
 bool CMasternodeCenter::VerifyLicense(const CMasternodePing &mnp)
@@ -2217,11 +2210,5 @@ bool CMasternodeCenter::VerifyLicense(const CMasternodePing &mnp)
         return true;
     
     CMstNodeData mnData(mnp);
-    bool ret = mnData.VerifyLicense();
-    if(!ret)
-    {
-        RequestCenterKey();
-        return mnData.VerifyLicense();
-    }else
-        return ret;
+    return mnData.VerifyLicense();
 }
