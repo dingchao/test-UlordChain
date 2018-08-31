@@ -397,7 +397,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
         if(mnodeman.Get(activeMasternode.vin, mn)) {
             mnObj.push_back(Pair("payee", CBitcoinAddress(mn.GetPayeeDestination()).ToString()));
             mnObj.push_back(Pair("license version", mn.certifyVersion));
-            mnObj.push_back(Pair("license period", mn.certifyPeriod));
+            mnObj.push_back(Pair("license period", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", mn.certifyPeriod));
             mnObj.push_back(Pair("license data", mn.certificate));
             if(mn.certifyPeriod <= GetTime())
             {
@@ -459,21 +459,25 @@ UniValue masternode(const UniValue& params, bool fHelp)
         CMasternode mn;
         if(mnodeman.Get(activeMasternode.vin, mn)) 
         {
-            mnObj.push_back(Pair(mn.vin.prevout.ToStringShort(), mn.certificate.c_str()));
+            mnObj.push_back(Pair("license version", mn.certifyVersion));
+            mnObj.push_back(Pair("license period", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", mn.certifyPeriod));
+            mnObj.push_back(Pair("license data", mn.certificate));
+
+            if(mn.certifyPeriod <= GetTime())
+            {
+                mnObj.push_back(Pair("license status", "expire"));
+            }
+            else 
+            {
+                mnObj.push_back(Pair("license status", "enable"));
+            }
+            //mnObj.push_back(Pair(mn.vin.prevout.ToStringShort(), mn.certificate.c_str()));
         }
         else
         {
             mnObj.push_back(Pair(("status"), activeMasternode.GetStatus()));
         }
 
-        if(mn.certifyPeriod <= GetTime())
-        {
-            mnObj.push_back(Pair("license status", "expire"));
-        }
-        else 
-        {
-            mnObj.push_back(Pair("license status", "enable"));
-        }
         return mnObj;
     }
 
