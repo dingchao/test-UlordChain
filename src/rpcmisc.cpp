@@ -112,6 +112,11 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("paytxfee",      ValueFromAmount(payTxFee.GetFeePerK())));
 #endif
     obj.push_back(Pair("relayfee",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));
+
+    CAmount total;
+    for (unsigned int pos = 0; pos <= chainActive.Height(); pos++)
+        total = GetBlockSubsidy(chainActive.Height(), Params().GetConsensus());
+    obj.push_back(Pair("totalsubsidy",      total));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     return obj;
 }
