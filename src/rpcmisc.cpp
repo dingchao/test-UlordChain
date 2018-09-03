@@ -113,7 +113,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
 #endif
     obj.push_back(Pair("relayfee",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));
 
-    CAmount total;
+    CAmount total = 0;
     for (int pos = 0; pos <= chainActive.Height(); pos++)
         total = GetBlockSubsidy(chainActive.Height(), Params().GetConsensus());
     obj.push_back(Pair("totalsubsidy",      total));
