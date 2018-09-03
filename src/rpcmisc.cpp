@@ -115,7 +115,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
 
     CAmount total = 0;
     for (int pos = 0; pos <= chainActive.Height(); pos++)
-        total = GetBlockSubsidy(chainActive.Height(), Params().GetConsensus());
+        total += GetBlockSubsidy(chainActive.Height(), Params().GetConsensus());
     obj.push_back(Pair("totalsubsidy",      total));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     return obj;
