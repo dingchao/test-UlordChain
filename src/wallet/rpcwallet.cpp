@@ -438,7 +438,7 @@ UniValue claimname(const UniValue& params, bool fHelp)
     }
     if (fHelp || params.size() < 2 || params.size() > 3)
     throw runtime_error(
-        "claimname \"name\" \"value\" amount\n"
+        "claimname \"name\" \"ulordaddress\" \"amount\"\n"
         "\nCreate a transaction which issues a claim assigning a value to a name. The claim will be authoritative if the transaction amount is greater than the transaction amount of all other unspent transactions which issue a claim over the same name, and it will remain authoritative as long as it remains unspent and there are no other greater unspent transactions issuing a claim over the same name. The amount is a real and is rounded to the nearest 0.00000001\n"
         + HelpRequiringPassphrase() +
         "\nArguments:\n"
@@ -448,7 +448,7 @@ UniValue claimname(const UniValue& params, bool fHelp)
         "\nResult:\n"
         "\"transactionid\"  (string) The transaction id.\n"
 		"\nExamples:\n"
-		+ HelpExampleCli("sendtoaddress", "\"AlfredZKY\" \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 10")
+		+ HelpExampleCli("claimname", "\"alfredzky\" \"uwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 10")
     );
     string sName = params[0].get_str();
     string sAddress= params[1].get_str();
@@ -554,7 +554,7 @@ UniValue updateclaim( const UniValue & params,bool fHelp)
         return NullUniValue;
     if ( fHelp || params.size() != 3 )
      throw runtime_error(
-        "updateclaim \"txid\" \"value\" amount\n"
+        "updateclaim \"txid\" \"newaddress\" amount\n"
         "Create a transaction which issues a claim assigning a value to a name, spending the previous txout which issued a claim over the same name and therefore superseding that claim. The claim will be authoritative if the transaction amount is greater than the transaction amount of all other unspent transactions which issue a claim over the same name, and it will remain authoritative as long as it remains unspent and there are no greater unspent transactions issuing a claim over the same name.\n"
         + HelpRequiringPassphrase() +
         "\nArguments:\n"
@@ -563,6 +563,8 @@ UniValue updateclaim( const UniValue & params,bool fHelp)
         "3.  \"amount\"  (numeric, required) The amount in Ulord to use to bid for the name. eg 0.1\n"
         "\nResult:\n"
         "\"transactionid\"  (string) The new transaction id.\n"
+	"\nExamples:\n"
+		+ HelpExampleCli("updateclaim", "\"8fb48e61ccce3cb5083d8ad9ee7ab73c58a40c1594e43386ca425cd12187db6a\" \"uwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 10")
     );
 
     uint256 hash;
@@ -661,6 +663,8 @@ UniValue abandonclaim(const UniValue&params,bool fHelp)
         "3. \"amount\"  (numeric, required) The amount to send to the ulord address. eg 0.1\n"
         "\nResult:\n"
         "\"transactionid\"  (string) The new transaction id.\n"
+	"\nExamples:\n"
+		+ HelpExampleCli("abandonclaim", "\"alfredzky\" \"8fb48e61ccce3cb5083d8ad9ee7ab73c58a40c1594e43386ca425cd12187db6a\" 10")
     );
     uint256 hash;
     hash.SetHex(params[0].get_str());
@@ -3634,7 +3638,7 @@ UniValue sendtoaccountname(const UniValue &params, bool fHelp)
 {
 	 if (fHelp ||  params.size() != 2)
         throw std::runtime_error(
-        "sendtoaccountname \"name\" \"amount\n"
+        "sendtoaccountname \"name\" \"amount\" \n"
         "\nSend an amount to a given account name.\n"
         + HelpRequiringPassphrase() +
         "\nArguments:\n"
@@ -3643,7 +3647,7 @@ UniValue sendtoaccountname(const UniValue &params, bool fHelp)
         "\nResult:\n"
         "\"transactionid\"  (string) The transaction id.\n"
         "\nExamples:\n"
-        + HelpExampleCli("sendtoaccountname", "\"AlfredZKY\" 0.1")
+        + HelpExampleCli("sendtoaccountname", "\"alfredzky\" 0.1")
     );
 
     std::string sName = params[0].get_str();
