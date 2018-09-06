@@ -7414,13 +7414,13 @@ int VerifyDecodeClaimScript(const CScript& scriptIn, int& op, std::vector<std::v
 	bool b_r;
 	int i_times = m_vStringName.count(sName);
 	LogPrintf("i_times is %d\n",i_times);
-
+	
+	if ( m_vStringName.end() != m_vStringName.find(sName) )
+	{
+		return ACCOUNTNAME_EXISTS;
+	}
 	for ( m_it = m_vStringName.begin() ; m_it != m_vStringName.end() ; m_it++ )
 	{
-		if ( !m_it->first.compare(sName) )
-		{
-			return ACCOUNTNAME_EXISTS;
-		}
 		if ( (chainActive.Height() - m_it->second) >= MIN_ACCOUNT_NAME_NUMBER )
 		{
 			s_tempname = m_it->first;
