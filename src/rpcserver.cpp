@@ -428,6 +428,7 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",          "getnameproof",              &getnameproof,           true  },  
     { "hidden",          "getclaimbyid",              &getclaimbyid,           true  },
     { "hidden",          "sendtoaccountname",         &sendtoaccountname,      true  },
+    { "hidden",          "getaccountnamefromaddress", &getaccountnamefromaddress,true  },
     /* atomic swap contract of transaction about RPC */
     { "hidden",	         "crosschaininitial",         &crosschaininitial,      true  },
     { "hidden",          "crosschainparticipate",     &crosschainparticipate,  true  },
@@ -436,8 +437,8 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",          "crosschainextractsecret",   &crosschainextractsecret,true  },
     { "hidden",          "crosschainauditcontract",   &crosschainauditcontract,true  },
     
-	{ "hidden", 		 "lockcoinforsometime",       &lockcoinforsometime,     true  },
-	{ "hidden", 		 "refundlockcoin",      	  &refundlockcoin,          true  },
+	{ "hidden", 		 "lockcoin",       &lockcoin,     true  },
+	{ "hidden", 		 "unlockcoin",      	  &unlockcoin,          true  },
 #endif // ENABLE_WALLET
 };
 

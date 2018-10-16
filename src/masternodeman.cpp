@@ -120,16 +120,6 @@ void showbuf(const char * buf, int len)
 	printf("\n");
 }
 
-/*void GetRequestMsg(std::string & str)
-{
-	mstnodequest   mstquest(111,MST_QUEST_ONE);
-    mstquest.SetMasterAddr(std::string("NdsRM9waShDUT3TqhgdsGCzqH33Wwb8zDB") );
-    std::ostringstream os;
-    boost::archive::binary_oarchive oa(os);
-    oa<<mstquest;
-	str = os.str();
-}*/
-
 bool SendRequestNsg(SOCKET sock, CMasternode &mn, mstnodequest &mstquest)
 {
 	std::string strReq;
@@ -280,7 +270,7 @@ void CMasternodeMan::CheckAndRemove()
             CMasternodeBroadcast mnb = CMasternodeBroadcast(*it);
             uint256 hash = mnb.GetHash();
             // If collateral was spent ...
-            if ((*it).IsOutpointSpent() || (*it).IsRegistered()) {
+            if ((*it).IsOutpointSpent()) {
                 LogPrint("masternode", "CMasternodeMan::CheckAndRemove -- Removing Masternode: %s  addr=%s  %i now\n", (*it).GetStateString(), (*it).addr.ToString(), size() - 1);
 
                 // erase all of the broadcasts we've seen from this txin, ...
@@ -944,18 +934,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         int nDos = 0;
         if(mnp.CheckAndUpdate(pmn, false, nDos)) return;
 
-        // check the certificate and make sure if the masternode had registered on the Ulord center server
-        if(!mnodecenter.VerifyLicense(mnp))
-        {
-            if(pmn)
-            pmn->nActiveState = pmn->MASTERNODE_NO_REGISTERED;
-
-            LogPrintf("MNPING -- Verify license failed masternode=%s\n",mnp.vin.prevout.ToStringShort());
-            nDos += 10;
-        }else{
-            return ;
-        }
-
         if(nDos > 0) {
             // if anything significant failed, mark that node
             Misbehaving(pfrom->GetId(), nDos);
@@ -1018,7 +996,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             }
 
             if (vin == mn.vin) {
-                LogPrintf("DSEG -- Sent 1 Masternode inv to peer %d\n", pfrom->id);
+                LogPrintf("DSEG -- Sent Masternode<%s> inv to peer %d\n", mn.vin.prevout.ToStringShort(), pfrom->id);
                 return;
             }
         }
@@ -1469,7 +1447,7 @@ std::string CMasternodeMan::ToString() const
 
 void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb)
 {
-    LOCK(cs);
+    LOCK2(cs_main, cs);
     mapSeenMasternodePing.insert(std::make_pair(mnb.lastPing.GetHash(), mnb.lastPing));
     mapSeenMasternodeBroadcast.insert(std::make_pair(mnb.GetHash(), std::make_pair(GetTime(), mnb)));
 
@@ -1506,6 +1484,11 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
             LogPrint("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen update\n", mnb.vin.prevout.ToStringShort());
             mapSeenMasternodeBroadcast[hash].first = GetTime();
             masternodeSync.AddedMasternodeList();
+        }
+        if(mapSeenMasternodeBroadcast[hash].second.certifyPeriod < mnb.certifyPeriod && mnodecenter.VerifyLicense(CMasternode(mnb))) {
+            mapSeenMasternodeBroadcast[hash].second.certifyPeriod = mnb.certifyPeriod;
+            mapSeenMasternodeBroadcast[hash].second.certificate = mnb.certificate;
+            mapSeenMasternodeBroadcast[hash].second.certifyVersion = mnb.certifyVersion;
         }
         // did we ask this node for it?
         if(pfrom && IsMnbRecoveryRequested(hash) && GetTime() < mMnbRecoveryRequests[hash].first) {
@@ -1728,6 +1711,11 @@ void CMasternodeMan::SetMasternodeLastPing(const CTxIn& vin, const CMasternodePi
     uint256 hash = mnb.GetHash();
     if(mapSeenMasternodeBroadcast.count(hash)) {
         mapSeenMasternodeBroadcast[hash].second.lastPing = mnp;
+        if(mapSeenMasternodeBroadcast[hash].second.certifyPeriod < mnp.certifyPeriod) {
+            mapSeenMasternodeBroadcast[hash].second.certifyPeriod = mnp.certifyPeriod;
+            mapSeenMasternodeBroadcast[hash].second.certificate = mnp.certificate;
+            mapSeenMasternodeBroadcast[hash].second.certifyVersion = mnp.certifyVersion;
+        }
     }
 }
 
@@ -1846,6 +1834,7 @@ bool CMstNodeData::IsNeedUpdateLicense()
     return false;
 }
 
+/*keep for the old version*/
 int mstnodequest::GetMsgBuf(char * buf)
 {
     std::ostringstream os;
@@ -1864,11 +1853,32 @@ int mstnodequest::GetMsgBuf(char * buf)
     return buflength;
 }
 
+/*new functuion without boost*/
+int mstnodequest::GetMsgBufNew(char * buf)
+{
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << *this;
+    std::string strReq = ss.str();
+    int buflength = strReq.length();
+    if(buflength + mstnd_iReqMsgHeadLen > mstnd_iReqBufLen) {
+        LogPrintf("mstnodequest::GetMsgBuf: buff size error, string length is %d, need to increase buff size", buflength + mstnd_iReqMsgHeadLen);
+        return 0;
+    }
+    unsigned int n = HNSwapl(buflength);
+    memcpy(buf, &n, mstnd_iReqMsgHeadLen);
+    memcpy(buf + mstnd_iReqMsgHeadLen, strReq.c_str(), buflength);
+    buflength += mstnd_iReqMsgHeadLen;
+    return buflength;
+}
+
 bool CMasternodeCenter::InitCenter(std::string strError)
 {
-    std::vector<CNetAddr> vIPs;
+    if (!sporkManager.IsSporkActive(SPORK_18_REQUIRE_MASTER_VERIFY_FLAG)) return true;
 
-    if (LookupHost(Params().ucenter().c_str(), vIPs)) {
+    std::vector<CNetAddr> vIPs;
+    std::string sCenterDomain = GetArg("-centerdomain", Params().ucenter());
+
+    if (LookupHost(sCenterDomain.c_str(), vIPs)) {
         if (vIPs.empty()) {
             strError = "ucenter ip resolving failed, IPs empty.";
             return false;
@@ -1910,6 +1920,9 @@ bool CMasternodeCenter::InitCenter(std::string strError)
 
 std::string CMasternodeCenter::GetCenterPubKey(int version)
 {
+    if(!IsUse())
+            return "";
+    
     map_it it = mapVersionPubkey_.find(version);
     if(it != mapVersionPubkey_.end()) {
         return it->second;
@@ -1943,7 +1956,7 @@ bool CMasternodeCenter::RequestLicense(CMasternode &mn)
     mstquest._txid = mn.vin.prevout.hash.GetHex();
     mstquest._voutid = mn.vin.prevout.n;
 
-    buflength = mstquest.GetMsgBuf(cbuf);
+    buflength = mstquest.GetMsgBufNew(cbuf);
     if(0 == buflength)
         return error("CMasternodeCenter::RequestLicense: get mstquest msg failed!!!!!!!!!");
 
@@ -1988,8 +2001,11 @@ bool CMasternodeCenter::RequestLicense(CMasternode &mn)
 
         std::string str(cbuf + mstnd_iReqMsgHeadLen, buflength);
         mstnoderes  mstres;
-        std::istringstream strstream(str);
-        boost::archive::binary_iarchive ia(strstream);
+        /*std::istringstream strstream(str);
+        boost::archive::binary_iarchive ia(strstream);*/
+        std::vector<char> vRcv;
+        vRcv.insert(vRcv.end(), str.begin(), str.end());
+        CDataStream ia(vRcv, SER_NETWORK, PROTOCOL_VERSION);
         ia >> mstres;
         if(mstres._nodetype != MST_QUEST_ONE) {
             CloseSocket(hSocket);
@@ -2046,7 +2062,7 @@ bool CMasternodeCenter::RequestCenterKey()
     mstquest._txid = uint256().GetHex();
     mstquest._voutid = 0;
 
-    buflength = mstquest.GetMsgBuf(cbuf);
+    buflength = mstquest.GetMsgBufNew(cbuf);
     if(0 == buflength)
         return error("CMasternodeCenter::RequestCenterKey: get mstquest msg failed!!!!!!!!!");
 
@@ -2091,8 +2107,11 @@ bool CMasternodeCenter::RequestCenterKey()
 
         std::string str(cbuf + mstnd_iReqMsgHeadLen, buflength);
         mstnoderes  mstres;
-        std::istringstream strstream(str);
-        boost::archive::binary_iarchive ia(strstream);
+        /*std::istringstream strstream(str);
+        boost::archive::binary_iarchive ia(strstream);*/
+        std::vector<char> vRcv;
+        vRcv.insert(vRcv.end(), str.begin(), str.end());
+        CDataStream ia(vRcv, SER_NETWORK, PROTOCOL_VERSION);
         ia >> mstres;
         if(mstres._nodetype != MST_QUEST_KEY) {
             CloseSocket(hSocket);
@@ -2190,9 +2209,10 @@ bool CMasternodeCenter::CheckLicensePeriod(CMasternode &mn)
 {
     if(!IsUse())
         return true;
-    
-    if(mn.certifyPeriod <= 0 || mn.certifyPeriod - LIMIT_MASTERNODE_LICENSE < GetTime())
-        return RequestLicense(mn);
+    if(activeMasternode.vin.prevout.hash == mn.vin.prevout.hash && activeMasternode.vin.prevout.n == mn.vin.prevout.n) {
+        if(mn.certifyPeriod <= 0 || mn.certifyPeriod - LIMIT_MASTERNODE_LICENSE < GetTime())
+            RequestLicense(mn);
+    }
     return mn.certifyPeriod > GetTime();
 }
 

@@ -341,6 +341,7 @@ extern UniValue gettotalvalueofclaims(const UniValue& params, bool fHelp);
 extern UniValue getclaimsfortx(const UniValue& params, bool fHelp);
 extern UniValue proofToJSON(const CClaimTrieProof& proof);
 extern UniValue getnameproof(const UniValue& params, bool fHelp);
+extern UniValue getaccountnamefromaddress(const UniValue& params, bool fHelp);
 
 // atomic swap contract of transaction about RPC 
 extern UniValue crosschaininitial(const UniValue &params, bool fHelp);
@@ -352,8 +353,8 @@ extern UniValue crosschainauditcontract(const UniValue &params, bool fHelp);
 
 
 // lock coin for some time
-extern UniValue lockcoinforsometime(const UniValue &params, bool fHelp);
-extern UniValue refundlockcoin(const UniValue &params, bool fHelp);
+extern UniValue lockcoin(const UniValue &params, bool fHelp);
+extern UniValue unlockcoin(const UniValue &params, bool fHelp);
 
 
 bool StartRPC();

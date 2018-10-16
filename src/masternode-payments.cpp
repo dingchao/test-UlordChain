@@ -74,7 +74,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount nFees,CAmo
 
     CAmount nSuperblockMaxValue = CSuperblock::GetPaymentsLimit(nBlockHeight);
     bool isSuperblockMaxValueMet = (block.vtx[0].GetValueOut() <= (nSuperblockMaxValue+nFees));  
-	                       
+	                        // (block.vtx[0].GetValueOut() <= nSuperblockMaxValue);
                                    
 	if(CSuperblock::IsValidBlockHeight(nBlockHeight)) {
 		if(CSuperblock::IsFounderValid( block.vtx[0], nBlockHeight, blockReward )==false)

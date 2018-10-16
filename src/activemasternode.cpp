@@ -154,7 +154,6 @@ void CActiveMasternode::ManageStateInitial()
         if(!fFoundLocal) {
             // nothing and no live connections, can't do anything for now
             if (vNodes.empty()) {
-//LogPrintf("empty1234123412342134\n");                
 				nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
                 strNotCapableReason = "Can't detect valid external address. Will retry when there are some connections available.";
                 LogPrintf("CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
@@ -162,10 +161,10 @@ void CActiveMasternode::ManageStateInitial()
             }
             // We have some peers, let's try to find our local address from one of them
             BOOST_FOREACH(CNode* pnode, vNodes) {
-LogPrintf("fSuccessfullyConnected = %c, addr.IsIPv4 = %c\n", pnode->fSuccessfullyConnected ? 'y' : 'n', pnode->addr.IsIPv4() ? 'y' : 'n' );            
+                LogPrintf("fSuccessfullyConnected = %c, addr.IsIPv4 = %c\n", pnode->fSuccessfullyConnected ? 'y' : 'n', pnode->addr.IsIPv4() ? 'y' : 'n' );            
 			    if (pnode->fSuccessfullyConnected && pnode->addr.IsIPv4()) {
                     fFoundLocal = GetLocal(service, &pnode->addr) && CMasternode::IsValidNetAddr(service);
-LogPrintf("GetLocal() = %c, IsValidNetAddr = %c \n", GetLocal(service, &pnode->addr), CMasternode::IsValidNetAddr(service));
+                    LogPrintf("GetLocal() = %c, IsValidNetAddr = %c \n", GetLocal(service, &pnode->addr), CMasternode::IsValidNetAddr(service));
                     if(fFoundLocal) break;
                 }
             }
@@ -205,35 +204,6 @@ LogPrintf("GetLocal() = %c, IsValidNetAddr = %c \n", GetLocal(service, &pnode->a
 
     // Default to REMOTE
     eType = MASTERNODE_REMOTE;
-#if 0
-#ifdef ENABLE_WALLET
-    const CAmount ct = Params().GetConsensus().colleteral;
-    // Check if wallet funds are available
-    if(!pwalletMain) {
-        LogPrintf("CActiveMasternode::ManageStateInitial -- %s: Wallet not available\n", GetStateString());
-        return;
-    }
-
-    if(pwalletMain->IsLocked()) {
-        LogPrintf("CActiveMasternode::ManageStateInitial -- %s: Wallet is locked\n", GetStateString());
-        return;
-    }
-
-    if(pwalletMain->GetBalance() < ct) {
-        LogPrintf("CActiveMasternode::ManageStateInitial -- %s: Wallet balance is < %lld UT\n", GetStateString(), ct);
-        return;
-    }
-
-    // Choose coins to use
-    CPubKey pubKeyCollateral;
-    CKey keyCollateral;
-
-    // If collateral is found switch to LOCAL mode
-    if(pwalletMain->GetMasternodeVinAndKeys(vin, pubKeyCollateral, keyCollateral)) {
-        eType = MASTERNODE_LOCAL;
-    }
-#endif // ENABLE_WALLET
-#endif
 
 	if(masternodeConfig.GetMasternodeVin(vin))
 	{

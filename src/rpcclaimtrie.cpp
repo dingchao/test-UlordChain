@@ -12,6 +12,7 @@
 #include "base58.h"
 
 
+
 // Maximum block decrement that is allowed from rpc calls
 const int MAX_RPC_BLOCK_DECREMENTS = 50;
 
@@ -34,7 +35,7 @@ UniValue getclaimsintrie(const UniValue& params, bool fHelp)
             "        \"n\"       (numeric) the vout value of the claim\n"
             "        \"amount\"  (numeric) txout amount\n"
             "        \"height\"  (numeric) the height of the block in which this transaction is located\n"
-            "        \"value\"   (string) the value of this claim\n"
+            "        \"address\"   (string) the address(UT) of this claim\n"
             "      }\n"
             "    ]\n"
             "  }\n"
@@ -84,7 +85,7 @@ UniValue getclaimsintrie(const UniValue& params, bool fHelp)
                     }
 	            // Add a layer of base58check encoding to the value
 		    std::string sValue(vvchParams[1].begin(), vvchParams[1].end());
-                    claim.push_back(Pair("value", sValue));
+                    claim.push_back(Pair("address", sValue));
                 }
                 claims.push_back(claim);
             }
@@ -112,6 +113,7 @@ UniValue getclaimtrie(const UniValue& params, bool fHelp)
             "  \"value\"          (numeric) (if value exists) txout value\n"
             "  \"height\"         (numeric) (if value exists) the height of the block in which this transaction is located\n"
             "}\n"
+            "\nExamples:\n"
         );
 
     LOCK(cs_main);
@@ -134,6 +136,66 @@ UniValue getclaimtrie(const UniValue& params, bool fHelp)
         ret.push_back(node);
     }
     return ret;
+}
+UniValue getaccountnamefromaddress(const UniValue& params, bool fHelp)
+{
+	if (fHelp || params.size() != 1)
+		throw std::runtime_error(
+			"getaccountnamefromaddress \n"
+			"Return the entire name trie info from bind address.\n"
+			"Arguments:\n"
+			"None\n"
+			"Result: \n"
+			"{\n"
+			"  \"name\" 		  (string) the name of the node\n"
+			"  \"hash\" 		  (string) the hash of the node\n"
+			"  \"txid\" 		  (string) (if value exists) the hash of the transaction which has successfully claimed this name\n"
+			"  \"n\"			  (numeric) (if value exists) vout value\n"
+			"  \"value\"		  (numeric) (if value exists) txout value\n"
+			"  \"height\"		  (numeric) (if value exists) the height of the block in which this transaction is located\n"
+			"  \"address\"		  (numeric) The ulord address for bind accountname.\n"
+			"}\n"
+			"\nExamples:\n"
+			+ HelpExampleCli("getaccountnamefromaddress", "\"uwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\"")
+			+ HelpExampleRpc("getaccountnamefromaddress", "\"uwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\"")	
+			);
+	LOCK(cs_main);
+    UniValue ret(UniValue::VARR);
+	std::string sAddress = params[0].get_str();
+	CBitcoinAddress address(sAddress);
+	if (!address.IsValid())
+	{
+		throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Ulord address");
+	}
+
+	unsigned int i_num = 0;
+    std::vector<namedNodeType> nodes = pclaimTrie->flattenTrie();
+    for (std::vector<namedNodeType>::iterator it = nodes.begin(); it != nodes.end(); ++it)
+    {
+    	UniValue node(UniValue::VOBJ);
+    	node.push_back(Pair("name", it->first));                                                       
+		node.push_back(Pair("hash", it->second.hash.GetHex()));
+		CClaimValue claim;
+		if (it->second.getBestClaim(claim))
+        {
+        	if ( i_num > MAX_NUM )
+        	{
+        	    break;
+        	}
+		if ( !claim.saddr.compare(sAddress) )
+	    	{	 
+				node.push_back(Pair("txid", claim.outPoint.hash.GetHex()));                                    
+				node.push_back(Pair("n", (int)claim.outPoint.n));                                             
+				node.push_back(Pair("value", ValueFromAmount(claim.nAmount)));                                           
+				node.push_back(Pair("height", claim.nHeight)); 
+				node.push_back(Pair("address",claim.saddr)); 
+				ret.push_back(node);
+				i_num++;
+	   	}
+        }
+    }
+    return ret;
+
 }
 
 bool getValueForClaim(const COutPoint& out, std::string& sValue)
@@ -181,7 +243,7 @@ UniValue getvalueforname(const UniValue& params, bool fHelp)
             "Arguments:\n"
             "1. \"name\"             (string) the name to look up\n"
             "Result: \n"
-            "\"value\"               (string) the value of the name, if it exists\n"
+            "\"address\"             (string) account name Binding address\n"
             "\"claimId\"             (string) the claimId for this name claim\n"
             "\"txid\"                (string) the hash of the transaction which successfully claimed the name\n"
             "\"n\"                   (numeric) vout value\n"
@@ -198,7 +260,7 @@ UniValue getvalueforname(const UniValue& params, bool fHelp)
     std::string sValue;
     if (!getValueForClaim(claim.outPoint, sValue))
         return ret;
-    ret.push_back(Pair("value", sValue));
+    ret.push_back(Pair("address", sValue));
     ret.push_back(Pair("claimId", claim.claimId.GetHex()));
     ret.push_back(Pair("txid", claim.outPoint.hash.GetHex()));
     ret.push_back(Pair("n", (int)claim.outPoint.n));
@@ -242,7 +304,7 @@ UniValue claimsAndSupportsToJSON(claimSupportMapType::const_iterator itClaimsAnd
     std::string sValue;
     if (getValueForClaim(claim.outPoint, sValue))
     {
-        ret.push_back(Pair("value", sValue));
+        ret.push_back(Pair("address", sValue));
     }
     ret.push_back(Pair("nEffectiveAmount", nEffectiveAmount));
     ret.push_back(Pair("supports", supportObjs));
@@ -308,7 +370,10 @@ UniValue getclaimsforname(const UniValue& params, bool fHelp)
             "      \"nAmount\"  (numeric) the amount of the support\n"
             "    }\n"
             "  ]\n"
-            "}\n"   
+            "}\n" 
+	    "\nExamples:\n"
+	    + HelpExampleCli("getclaimsforname", "\"alfredzky\"")
+	    + HelpExampleRpc("getclaimsforname", "\"alfredzky\"")
         );
 
     LOCK(cs_main);
@@ -366,7 +431,7 @@ UniValue getclaimbyid(const UniValue& params, bool fHelp)
                         "Result:\n"
                         "{\n"
                         "  \"name\"                (string) the name of the claim\n"
-                        "  \"value\"               (string) claim metadata\n"
+                        "  \"address\"              (string) account name Binding address\n"
                         "  \"claimId\"             (string) the claimId of this claim\n"
                         "  \"txid\"                (string) the hash of the transaction which has successfully claimed this name\n"
                         "  \"n\"                   (numeric) vout value\n"
@@ -389,7 +454,7 @@ UniValue getclaimbyid(const UniValue& params, bool fHelp)
                     std::string sValue;
                     getValueForClaim(itClaims->outPoint, sValue);
                     claim.push_back(Pair("name", it->first));
-                    claim.push_back(Pair("value", sValue));
+                    claim.push_back(Pair("address", sValue));
                     claim.push_back(Pair("claimId", itClaims->claimId.GetHex()));
                     claim.push_back(Pair("txid", itClaims->outPoint.hash.GetHex()));
                     claim.push_back(Pair("n", (int) itClaims->outPoint.n));
@@ -485,7 +550,7 @@ UniValue getclaimsfortx(const UniValue& params, bool fHelp)
             "    \"nOut\"                   (numeric) the index of the claim or support in the transaction's list out outputs\n"
             "    \"claim type\"             (string) 'claim' or 'support'\n"
             "    \"name\"                   (string) the name claimed or supported\n"
-            "    \"value\"                  (string) if a name claim, the value of the claim\n"
+            "    \"address\"                (string) account name Binding address\n"
             "    \"supported txid\"         (string) if a support, the txid of the supported claim\n"
             "    \"supported nout\"         (numeric) if a support, the index of the supported claim in its transaction\n"
             "    \"depth\"                  (numeric) the depth of the transaction in the main chain\n"
@@ -548,7 +613,7 @@ UniValue getclaimsfortx(const UniValue& params, bool fHelp)
 		    std::string sValue(vvchParams[1].begin(), vvchParams[1].end());
                     uint160 claimId = ClaimIdHash(hash, i);
                     o.push_back(Pair("claimId", claimId.GetHex()));
-                    o.push_back(Pair("value", sValue));
+                    o.push_back(Pair("address", sValue));
                 }
                 else if (op == OP_UPDATE_CLAIM)
                 {
@@ -556,7 +621,7 @@ UniValue getclaimsfortx(const UniValue& params, bool fHelp)
                     // Add a layer of base58check encoding to the value
 		    std::string sValue(vvchParams[2].begin(), vvchParams[2].end());
                     o.push_back(Pair("claimId", claimId.GetHex()));
-                    o.push_back(Pair("value", sValue));
+                    o.push_back(Pair("address", sValue));
                 }
                 else if (op == OP_SUPPORT_CLAIM)
                 {
