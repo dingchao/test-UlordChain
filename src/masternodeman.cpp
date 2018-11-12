@@ -236,6 +236,17 @@ void CMasternodeMan::SetRegisteredCheckInterval(int time)
     }
 }
 
+bool CMasternodeMan::PoSeBan(const COutPoint &outpoint)
+{
+    LOCK(cs);
+    CMasternode* pmn = Find(outpoint);
+    if (!pmn) {
+        return false;
+    }
+    pmn->PoSeBan();
+
+    return true;
+}
 
 void CMasternodeMan::Check()
 {
@@ -541,6 +552,18 @@ CMasternode* CMasternodeMan::Find(const CTxIn &vin)
     }
     return NULL;
 }
+
+CMasternode* CMasternodeMan::Find(const COutPoint& outpoint)
+{
+	LOCK(cs);
+	BOOST_FOREACH(CMasternode& mn, vMasternodes)
+	{
+		if(mn.vin.prevout == outpoint)
+			return &mn;
+	}
+	return NULL;
+}
+
 
 CMasternode* CMasternodeMan::Find(const CPubKey &pubKeyMasternode)
 {
@@ -2220,10 +2243,12 @@ bool CMasternodeCenter::ReadLicense(CMasternode &mn)
         LogPrintf("CMasternodeCenter::ReadLicense -- verify cetificate failed\n");
         return false;
     }
-
-    mn.certificate = strCettificate;
-    mn.certifyPeriod = nPeriod;
-    mn.certifyVersion = mnData._licversion;
+    if(nPeriod >mn.certifyPeriod  )
+    {
+       mn.certificate = strCettificate;
+       mn.certifyPeriod = nPeriod;
+       mn.certifyVersion = mnData._licversion;
+    }
     return true;
 }
 
@@ -2245,7 +2270,8 @@ bool CMasternodeCenter::CheckLicensePeriod(CMasternode &mn)
         return true;
     if(activeMasternode.vin.prevout.hash == mn.vin.prevout.hash && activeMasternode.vin.prevout.n == mn.vin.prevout.n) {
         if(mn.certifyPeriod <= 0 || mn.certifyPeriod - LIMIT_MASTERNODE_LICENSE < GetTime())
-            RequestLicense(mn);
+            if(!RequestLicense(mn))
+                ReadLicense(mn);
     }
     return mn.certifyPeriod > GetTime();
 }

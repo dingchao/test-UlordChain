@@ -20,7 +20,7 @@ void CMasternodeConfig::add(std::string alias, std::string ip, std::string privK
 
 bool CMasternodeConfig::read(std::string& strErr) {
 
-
+    //Load the masternode node information when masternode is true 
     bool masternodeflag = GetBoolArg("-masternode", false);
     if(masternodeflag)
     {
@@ -130,6 +130,7 @@ bool CMasternodeConfig::AvailableCoins(uint256 txHash, unsigned int index)
         return false;
     }
 
+    //check colleteral UTXO confirmations 
     if(chainActive.Height() - coins.nHeight + 1 < Params().GetConsensus().nMasternodeMinimumConfirmations) 
     {
         LogPrintf("CMasternodeConfig::AvailableCoins -- Masternode UTXO must have at least %d confirmations\n",Params().GetConsensus().nMasternodeMinimumConfirmations);

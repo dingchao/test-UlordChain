@@ -203,7 +203,8 @@ public:
         consensus.nMasternodePaymentsStartBlock = 50;                // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
         //consensus.nMasternodePaymentsIncreaseBlock = 576 * 365;         //576 * 365
         consensus.nMasternodePaymentsIncreasePeriod = 576 * 365;        // 17280 - actual historical value
-        consensus.nInstantSendKeepLock = 24;
+        consensus.nInstantSendKeepLock = 24;				//number of blocks for instantsend lock
+		consensus.nInstantSendConfirmationsRequired = 6;
         consensus.nBudgetPaymentsStartBlock = 2;                        // actual historical value
         consensus.nBudgetPaymentsCycleBlocks = 10;                // ~(60*24*30)/2.6, actual number of blocks per month is 200700 / 12 = 16725
         consensus.nBudgetPaymentsWindowBlocks = 10;
@@ -247,7 +248,7 @@ public:
         pchMessageStart[2] = 0x6f;
         pchMessageStart[3] = 0xb1;
 		vAlertPubKey = ParseHex("028efd0f3c697689f8f1f6744edbbc1f85871b8c51218ddd89d90a3e435d1a8691");
-        nDefaultPort = 49888;
+        nDefaultPort = 1988;
         nMaxTipAge = 6 * 60 * 60; // ~144 blocks behind -> 2 x fork detection time, was 24 * 60 * 60 in bitcoin
         nPruneAfterHeight = 100000;
         arith_uint256 nTempBit =  UintToArith256( consensus.powLimit);
